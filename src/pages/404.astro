@@ -5,7 +5,16 @@ import Base from '../layouts/Base.astro';
 import { href } from '../lib/data';
 ---
 <Base title="找不到這一頁">
-  <h1>找不到這一頁</h1>
-  <p class="muted">可能是網址打錯，或這個講題還在邀約講者、還沒有自己的頁面。</p>
-  <p><a href={href('/')}>回到全部場次</a></p>
+  <section class="nf">
+    <p class="code mono">404</p>
+    <h1>找不到這一頁</h1>
+    <p class="muted">可能是網址打錯，或這個講題還在邀約講者，還沒有自己的頁面。</p>
+    <a href={href('/')}>回到全部場次</a>
+  </section>
 </Base>
+
+<style>
+  .nf { padding: 48px 0; max-width: 32rem; }
+  .code { font-size: 4rem; font-weight: 500; letter-spacing: -.04em; line-height: 1; margin: 0 0 16px; color: var(--accent); }
+  .nf h1 { margin-bottom: 8px; }
+</style>

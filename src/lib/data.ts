@@ -86,6 +86,14 @@ export function rundown(e: Event, talks: Talk[]) {
 const toMinutes = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
 const fromMinutes = (n: number) => `${String(Math.floor(n / 60) % 24).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`;
 
+// YouTube 縮圖（hqdefault 每支影片都有；maxres 不一定有）
+export const thumbUrl = (t: Talk) => (t.video?.youtube_id ? `https://i.ytimg.com/vi/${t.video.youtube_id}/hqdefault.jpg` : null);
+
+export function monthDay(e: Event) {
+  const [, m, d] = e.date.split('-').map(Number);
+  return { month: m, day: d };
+}
+
 // Google 簡報（含上傳到 Drive 再用簡報開的 .pptx）可以內嵌；其他（Drive 資料夾、PDF 連結…）只放連結
 export function slidesEmbed(url: string | null) {
   const m = url?.match(/^https:\/\/docs\.google\.com\/presentation\/d\/([\w-]+)/);

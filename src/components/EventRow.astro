@@ -1,0 +1,64 @@
+---
+import { eventTitle, hasContent, href, monthDay, speakerNames, talkTitle, type Event, type Talk } from '../lib/data';
+
+interface Props { event: Event; talks: Talk[] }
+const { event: e, talks } = Astro.props;
+const shown = talks.filter(hasContent);
+const openSlots = talks.length - shown.length;
+const { month, day } = monthDay(e);
+const norm = (s: string) => s.toLowerCase();
+const eventText = norm([eventTitle(e), e.venue, e.sponsor].filter(Boolean).join(' '));
+const talkText = (t: Talk) =>
+  norm([talkTitle(t), t.description, ...t.speakers.flatMap((s) => [s.name, s.affiliation]), ...t.keywords].filter(Boolean).join(' '));
+---
+<article class="row" data-series={e.series} data-search={eventText}>
+  <a class="date" href={href(`/events/${e.id}/`)} aria-label={`${e.date} 場次`}>
+    <span class="day mono">{day}</span>
+    <span class="month">{month} 月・週{e.weekday}</span>
+  </a>
+  <div class="body">
+    <div class="meta">
+      <span class="badge">{e.series}</span>
+      {e.start_time && <span class="mono">{e.start_time}</span>}
+      {e.format && <span>{e.format}</span>}
+      {e.status === '停辦' && <span class="badge accent">停辦</span>}
+    </div>
+    <h3><a href={href(`/events/${e.id}/`)}>{e.theme ?? e.series}</a></h3>
+    {shown.length > 0 && (
+      <ul class="talks">
+        {shown.map((t) => (
+          <li data-search={talkText(t)}>
+            <div class="talk-title">
+              {t.kind === 'qa' ? <span>QA</span> : <a href={href(`/talks/${t.id}/`)}>{talkTitle(t)}</a>}
+              {t.video?.youtube_id && <span class="badge">影片</span>}
+              {t.slides_url && <span class="badge">簡報</span>}
+            </div>
+            {t.speakers.length > 0 && <div class="speaker muted">{speakerNames(t)}</div>}
+          </li>
+        ))}
+      </ul>
+    )}
+    {openSlots > 0 && <p class="slots muted">還有 {openSlots} 位講者在邀約中</p>}
+  </div>
+</article>
+
+<style>
+  .row {
+    display: grid; grid-template-columns: 4.5rem 1fr; gap: 20px;
+    padding: 24px 0; border-top: 1px solid var(--line);
+  }
+  @media (min-width: 768px) { .row { grid-template-columns: 6rem 1fr; gap: 32px; } }
+  .date { display: flex; flex-direction: column; text-decoration: none; color: var(--text); }
+  .day { font-size: 2rem; font-weight: 500; line-height: 1; letter-spacing: -.03em; }
+  .month { font-size: .8rem; color: var(--muted); margin-top: 6px; }
+  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: .85rem; color: var(--muted); }
+  h3 { margin: 6px 0 10px; font-size: 1.15rem; }
+  h3 a { color: var(--text); text-decoration: none; }
+  h3 a:hover { color: var(--accent); }
+  .talks { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .talk-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+  .talk-title a { color: var(--text); text-decoration-color: color-mix(in srgb, var(--text) 25%, transparent); }
+  .talk-title a:hover { color: var(--accent); text-decoration-color: currentColor; }
+  .speaker { font-size: .875rem; }
+  .slots { margin: 10px 0 0; font-size: .85rem; }
+</style>

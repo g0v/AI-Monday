@@ -1,78 +1,129 @@
 ---
 import Base from '../layouts/Base.astro';
-import EventCard from '../components/EventCard.astro';
-import { getData, hasContent, today } from '../lib/data';
+import EventRow from '../components/EventRow.astro';
+import { formatDate, getData, hasContent, href, monthDay, speakerNames, talkTitle, thumbUrl, today } from '../lib/data';
 
 const { events, talks } = await getData();
-const talksOf = (id: string) => talks.filter((t) => t.event_id === id);
+const talksOf = (id: string) => talks.filter((t) => t.event_id === id).sort((a, b) => a.order - b.order);
+const eventOf = (id: string) => events.find((e) => e.id === id)!;
 
-// 即將舉行：只列已經有講者或講題的場次。之後每月的空場次（邀約中、還沒任何內容）不佔版面
-const upcoming = events.filter((e) => e.date >= today && e.status !== '停辦' && talksOf(e.id).some(hasContent));
-const pendingCount = events.filter((e) => e.date >= today && e.status !== '停辦').length - upcoming.length;
-const past = events.filter((e) => e.date < today).reverse();
+// 列表：過去的場次＋已經有講者的未來場次。之後每月還沒內容的空場次不佔版面
+const listed = events
+  .filter((e) => e.date < today || (e.status !== '停辦' && talksOf(e.id).some(hasContent)))
+  .reverse();
+const years = [...new Set(listed.map((e) => e.date.slice(0, 4)))];
+const next = events.find((e) => e.date >= today && e.status !== '停辦' && talksOf(e.id).some(hasContent));
+const pendingCount = events.filter((e) => e.date >= today && e.status !== '停辦' && !talksOf(e.id).some(hasContent)).length;
+
+const videos = talks
+  .filter((t) => t.video?.youtube_id)
+  .sort((a, b) => eventOf(b.event_id).date.localeCompare(eventOf(a.event_id).date) || a.order - b.order);
+const pastCount = events.filter((e) => e.date < today && e.status !== '停辦').length;
+const talkCount = talks.filter((t) => hasContent(t) && t.kind === 'talk').length;
 const series = [...new Set(events.map((e) => e.series))];
-const videoCount = talks.filter((t) => t.video?.youtube_id).length;
 ---
 <Base>
-  <h1>AI Monday 講題紀錄</h1>
-  <p class="muted lead">
-    g0v 揪松團的 AI Monday 線上講座，以及國會松、COSCUP 的 AI 主題議程。
-    共 {past.length} 場已舉辦、{videoCount} 支影片。
-  </p>
+  <section class="hero">
+    <h1>AI Monday 講題紀錄</h1>
+    <p class="lead">g0v 揪松團每月一場的 AI 線上講座，加上國會松與 COSCUP 的 AI 議程。每一場的講題、講者和錄影都在這裡。</p>
+    <dl class="stats">
+      <div><dt>已舉辦</dt><dd class="mono">{pastCount}<span>場</span></dd></div>
+      <div><dt>講題</dt><dd class="mono">{talkCount}<span>個</span></dd></div>
+      <div><dt>有錄影</dt><dd class="mono">{videos.length}<span>個講題</span></dd></div>
+    </dl>
+  </section>
 
-  <form class="filters" role="search" onsubmit="return false">
-    <input id="q" type="search" placeholder="搜尋講題、講者、單位、關鍵字" aria-label="搜尋" autocomplete="off" />
-    <div class="series" role="radiogroup" aria-label="系列">
-      <label><input type="radio" name="series" value="" checked /> 全部</label>
-      {series.map((s) => <label><input type="radio" name="series" value={s} /> {s}</label>)}
-    </div>
-  </form>
-  <p id="empty" class="muted" hidden>沒有符合的場次。</p>
-
-  {upcoming.length > 0 && (
-    <section data-section>
-      <h2>即將舉行</h2>
-      {upcoming.map((e) => <EventCard event={e} talks={talksOf(e.id)} />)}
+  {next && (
+    <section class="next panel" data-hide-on-search>
+      <div class="next-date">
+        <span class="label">下一場</span>
+        <span class="mono big">{monthDay(next).month}/{monthDay(next).day}</span>
+        <span class="muted">週{next.weekday}{next.start_time && ` ${next.start_time}`}・{next.format ?? next.series}</span>
+      </div>
+      <div class="next-body">
+        <span class="badge">{next.series}</span>
+        <h2><a href={href(`/events/${next.id}/`)}>{next.theme ?? `${next.series} ${formatDate(next)}`}</a></h2>
+        <ul>
+          {talksOf(next.id).filter(hasContent).map((t) => (
+            <li>
+              <a href={href(`/talks/${t.id}/`)}>{talkTitle(t)}</a>
+              {t.speakers.length > 0 && <span class="muted">{speakerNames(t)}</span>}
+            </li>
+          ))}
+        </ul>
+      </div>
     </section>
   )}
-  {pendingCount > 0 && <p class="muted pending">之後還有 {pendingCount} 場正在邀約講者。</p>}
 
-  <section data-section>
-    <h2>過去場次</h2>
-    {past.map((e) => <EventCard event={e} talks={talksOf(e.id)} />)}
+  {videos.length > 0 && (
+    <section class="videos" data-hide-on-search>
+      <h2>錄影</h2>
+      <div class="rail" tabindex="0" aria-label="有錄影的講題，可左右捲動">
+        {videos.map((t) => (
+          <a class="video-card" href={href(`/talks/${t.id}/`)}>
+            <div class="thumb"><img src={thumbUrl(t)!} alt="" loading="lazy" width="480" height="270" /></div>
+            <span class="v-title">{t.kind === 'qa' ? `QA｜${eventOf(t.event_id).theme ?? eventOf(t.event_id).series}` : talkTitle(t)}</span>
+            <span class="v-meta muted">{speakerNames(t) || eventOf(t.event_id).series}</span>
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <section class="all">
+    <div class="all-head">
+      <h2>所有場次</h2>
+      <form class="filters" role="search" onsubmit="return false">
+        <label for="q">搜尋講題、講者、單位或關鍵字</label>
+        <input id="q" type="search" autocomplete="off" />
+        <div class="seg" role="radiogroup" aria-label="依系列篩選">
+          <label><input type="radio" name="series" value="" checked /><span>全部</span></label>
+          {series.map((s) => <label><input type="radio" name="series" value={s} /><span>{s}</span></label>)}
+        </div>
+      </form>
+    </div>
+
+    <p id="empty" class="empty" hidden>沒有符合的場次。換個關鍵字，或把系列切回「全部」。</p>
+
+    {years.map((y) => (
+      <div class="year" data-year>
+        <h3 class="year-label mono">{y}</h3>
+        {listed.filter((e) => e.date.startsWith(y)).map((e) => <EventRow event={e} talks={talksOf(e.id)} />)}
+      </div>
+    ))}
+    {pendingCount > 0 && <p class="pending muted" data-hide-on-search>之後還有 {pendingCount} 場正在邀約講者。</p>}
   </section>
 </Base>
 
 <script>
   const q = document.querySelector<HTMLInputElement>('#q')!;
   const radios = [...document.querySelectorAll<HTMLInputElement>('input[name="series"]')];
-  const cards = [...document.querySelectorAll<HTMLElement>('.event-card')];
+  const rows = [...document.querySelectorAll<HTMLElement>('.row')];
   const empty = document.querySelector<HTMLElement>('#empty')!;
-  const pending = document.querySelector<HTMLElement>('.pending');
 
   function apply() {
     const terms = q.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
     const series = radios.find((r) => r.checked)?.value ?? '';
     const matches = (text: string) => terms.every((t) => text.includes(t));
     let visible = 0;
-    for (const card of cards) {
-      const items = [...card.querySelectorAll<HTMLElement>('li[data-search]')];
-      const eventHit = matches(card.dataset.search!);
+    for (const row of rows) {
+      const eventHit = matches(row.dataset.search!);
       // 場次本身符合就整場顯示；否則只留符合的講題
       let anyTalk = false;
-      for (const li of items) {
-        const hit = !terms.length || eventHit || matches(`${card.dataset.search} ${li.dataset.search}`);
+      for (const li of row.querySelectorAll<HTMLElement>('li[data-search]')) {
+        const hit = !terms.length || eventHit || matches(`${row.dataset.search} ${li.dataset.search}`);
         li.hidden = !hit;
         anyTalk ||= hit;
       }
-      const show = (!series || card.dataset.series === series) && (!terms.length || eventHit || anyTalk);
-      card.hidden = !show;
+      const show = (!series || row.dataset.series === series) && (!terms.length || eventHit || anyTalk);
+      row.hidden = !show;
       if (show) visible++;
     }
-    for (const sec of document.querySelectorAll<HTMLElement>('[data-section]')) {
-      sec.hidden = ![...sec.querySelectorAll<HTMLElement>('.event-card')].some((c) => !c.hidden);
+    for (const y of document.querySelectorAll<HTMLElement>('[data-year]')) {
+      y.hidden = ![...y.querySelectorAll<HTMLElement>('.row')].some((r) => !r.hidden);
     }
-    if (pending) pending.hidden = terms.length > 0 || !!series;
+    const filtering = terms.length > 0 || !!series;
+    for (const el of document.querySelectorAll<HTMLElement>('[data-hide-on-search]')) el.hidden = filtering;
     empty.hidden = visible > 0;
 
     const url = new URL(location.href);
@@ -81,11 +132,12 @@ const videoCount = talks.filter((t) => t.video?.youtube_id).length;
     history.replaceState(null, '', url);
   }
 
-  // 從網址還原（搜尋結果可以分享）
+  // 從網址還原（搜尋結果可以分享；講題頁的關鍵字也連到這裡）
   const params = new URLSearchParams(location.search);
   q.value = params.get('q') ?? '';
   const s = params.get('series');
   if (s) radios.forEach((r) => (r.checked = r.value === s));
+  if (q.value || s) document.querySelector('.all')!.scrollIntoView();
 
   q.addEventListener('input', apply);
   radios.forEach((r) => r.addEventListener('change', apply));
@@ -93,19 +145,62 @@ const videoCount = talks.filter((t) => t.video?.youtube_id).length;
 </script>
 
 <style>
-  .lead { margin-top: -.25em; }
-  .filters { position: sticky; top: 0; z-index: 1; background: var(--bg); padding: 12px 0; display: grid; gap: 10px; }
+  .hero { padding: 24px 0 48px; max-width: 46rem; }
+  .lead { font-size: 1.1rem; color: var(--muted); margin: 16px 0 32px; max-width: 38rem; }
+  .stats { display: flex; flex-wrap: wrap; gap: 16px 48px; margin: 0; }
+  .stats dt { font-size: .85rem; color: var(--muted); }
+  .stats dd { margin: 0; font-size: 2rem; font-weight: 500; letter-spacing: -.03em; line-height: 1.2; }
+  .stats dd span { font-family: var(--font); font-size: .9rem; color: var(--muted); margin-left: 4px; letter-spacing: 0; }
+
+  .next { display: grid; gap: 20px; padding: 24px; margin-bottom: 56px; }
+  @media (min-width: 768px) { .next { grid-template-columns: 12rem 1fr; gap: 40px; padding: 32px; } }
+  .next-date { display: flex; flex-direction: column; gap: 4px; }
+  .next-date .label { font-size: .85rem; font-weight: 600; color: var(--accent); }
+  .next-date .big { font-size: 3rem; font-weight: 500; line-height: 1; letter-spacing: -.04em; }
+  .next-date .muted { font-size: .9rem; }
+  .next-body h2 { margin: 8px 0 12px; }
+  .next-body h2 a { color: var(--text); text-decoration: none; }
+  .next-body h2 a:hover { color: var(--accent); }
+  .next-body ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .next-body li { display: flex; flex-wrap: wrap; gap: 0 12px; }
+  .next-body li .muted { font-size: .9rem; }
+
+  .videos { margin-bottom: 56px; }
+  .videos h2 { margin-bottom: 16px; }
+  .rail {
+    display: grid; grid-auto-flow: column; grid-auto-columns: min(78%, 280px); gap: 20px;
+    overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 12px; overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+  .video-card { scroll-snap-align: start; display: flex; flex-direction: column; gap: 4px; color: var(--text); text-decoration: none; transition: transform .2s; }
+  .video-card:active { transform: scale(.98); }
+  .video-card .thumb { margin-bottom: 8px; }
+  .v-title { font-weight: 500; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .video-card:hover .v-title { color: var(--accent); }
+  .v-meta { font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .all-head { display: grid; gap: 16px; margin-bottom: 8px; }
+  .filters { display: grid; gap: 8px; }
+  .filters > label { font-size: .85rem; color: var(--muted); }
   #q {
-    width: 100%; font: inherit; padding: 10px 14px; border-radius: var(--radius);
-    border: 1px solid var(--line); background: var(--surface); color: var(--text);
+    width: 100%; max-width: 32rem; font: inherit; padding: 10px 14px; border-radius: var(--r-md);
+    border: 1px solid var(--line); background: var(--surface); color: var(--text); transition: border-color .2s;
   }
-  #q:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .series { display: flex; flex-wrap: wrap; gap: 8px; }
-  .series label {
-    display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
-    padding: 2px 12px; border-radius: 999px; background: var(--chip); font-size: .875rem;
+  #q:hover { border-color: color-mix(in srgb, var(--text) 30%, var(--line)); }
+  #q:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .seg label { cursor: pointer; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg span {
+    display: inline-block; padding: 4px 12px; border-radius: var(--r-sm); font-size: .875rem;
+    background: var(--surface-2); color: var(--muted); transition: background .2s, color .2s;
   }
-  .series input { accent-color: var(--accent); margin: 0; }
-  .series label:has(input:checked) { background: var(--accent-soft); color: var(--accent); }
-  .pending { font-size: .875rem; }
+  .seg label:hover span { color: var(--text); }
+  .seg input:checked + span { background: var(--text); color: var(--bg); }
+  .seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .year { margin-top: 24px; }
+  .year-label { font-size: .85rem; font-weight: 500; color: var(--muted); margin: 24px 0 4px; }
+  .empty { padding: 32px 0; color: var(--muted); }
+  .pending { font-size: .875rem; border-top: 1px solid var(--line); padding-top: 20px; }
 </style>

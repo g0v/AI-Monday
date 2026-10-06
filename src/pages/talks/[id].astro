@@ -1,6 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { LICENSE_URL, eventTitle, slidesEmbed, formatDate, getData, hasContent, href, speakerNames, talkTitle } from '../../lib/data';
+import { LICENSE_URL, eventTitle, formatDate, getData, hasContent, href, slidesEmbed, speakerNames, talkTitle, thumbUrl } from '../../lib/data';
 
 // 空位（邀約中、沒有講者也沒有講題）不產生講題頁
 export async function getStaticPaths() {
@@ -12,95 +12,128 @@ const { events, talks } = await getData();
 const t = talks.find((x) => x.id === Astro.props.id)!;
 const e = events.find((x) => x.id === t.event_id)!;
 const siblings = talks.filter((x) => x.event_id === e.id && hasContent(x)).sort((a, b) => a.order - b.order);
-const i = siblings.indexOf(t);
-const prev = siblings[i - 1];
-const next = siblings[i + 1];
 const title = t.kind === 'qa' ? `QA｜${e.theme ?? e.series}` : talkTitle(t);
 const slides = slidesEmbed(t.slides_url);
 const embed = t.video?.youtube_id
   ? `https://www.youtube-nocookie.com/embed/${t.video.youtube_id}${t.video.start_sec ? `?start=${t.video.start_sec}` : ''}`
   : null;
+const license = t.license
+  ? { text: `${t.license.replace(/-/g, ' ')} 4.0`, url: LICENSE_URL[t.license] }
+  : t.license_status === 'pending' ? { text: '確認中' } : { text: '未標示' };
 ---
-<Base title={title} description={t.description ?? `${speakerNames(t)}｜${eventTitle(e)}`}>
-  <nav class="breadcrumb">
-    <a href={href('/')}>全部場次</a> › <a href={href(`/events/${e.id}/`)}>{formatDate(e)} {e.theme ?? e.series}</a>
-  </nav>
+<Base title={title} description={t.description ?? `${speakerNames(t)}｜${eventTitle(e)}`} image={thumbUrl(t) ?? undefined}>
+  <a class="back" href={href(`/events/${e.id}/`)}>← {formatDate(e)} {e.theme ?? e.series}</a>
 
-  <h1>{title}</h1>
-  {t.speakers.length > 0 && (
-    <ul class="speakers">
-      {t.speakers.map((s) => (
-        <li>
-          {s.url ? <a href={s.url}>{s.name}</a> : <strong>{s.name}</strong>}
-          {s.affiliation && <span class="muted">｜{s.affiliation}</span>}
-        </li>
-      ))}
-    </ul>
-  )}
-
-  {embed ? (
-    <div class="video">
-      <iframe
-        src={embed}
-        title={`${title}（影片）`}
-        loading="lazy"
-        allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        referrerpolicy="strict-origin-when-cross-origin"
-        allowfullscreen
-      ></iframe>
-    </div>
-  ) : (
-    <p class="card muted no-video">這個講題沒有影片紀錄。</p>
-  )}
-
-  {t.description && <p class="description">{t.description}</p>}
-
-  {slides && (
-    <section>
-      <h2>簡報</h2>
-      <div class="slides">
-        <iframe src={slides} title={`${title}（簡報）`} loading="lazy" allowfullscreen></iframe>
-      </div>
-      <p class="muted small"><a href={t.slides_url!}>在 Google 簡報開啟</a></p>
-    </section>
-  )}
-
-  <dl class="info card">
-    <dt>場次</dt><dd><a href={href(`/events/${e.id}/`)}>{eventTitle(e)}</a></dd>
-    <dt>日期</dt><dd>{formatDate(e)}</dd>
-    {t.duration_min && (<><dt>長度</dt><dd>{t.duration_min} 分鐘</dd></>)}
-    {t.slides_url && (<><dt>簡報</dt><dd><a href={t.slides_url}>{t.slides_url}</a></dd></>)}
-    {t.video && (<><dt>影片</dt><dd><a href={t.video.url}>在 YouTube 上看</a></dd></>)}
-    {t.video && (
-      <>
-        <dt>授權</dt>
-        <dd>
-          {t.license
-            ? <a href={LICENSE_URL[t.license] ?? '#'}>{t.license.replace(/-/g, ' ')} 4.0</a>
-            : t.license_status === 'pending' ? '確認中' : '未標示'}
-        </dd>
-      </>
+  <header class="head">
+    <h1 class="page-title">{title}</h1>
+    {t.speakers.length > 0 && (
+      <ul class="speakers">
+        {t.speakers.map((s) => (
+          <li>
+            {s.url ? <a href={s.url}>{s.name}</a> : <span class="name">{s.name}</span>}
+            {s.affiliation && <span class="muted">{s.affiliation}</span>}
+          </li>
+        ))}
+      </ul>
     )}
-    {t.keywords.length > 0 && (<><dt>關鍵字</dt><dd>{t.keywords.map((k) => <a class="chip" href={href(`/?q=${encodeURIComponent(k)}`)}>{k}</a>)}</dd></>)}
-  </dl>
+  </header>
 
-  <nav class="pager">
-    {prev ? <a href={href(`/talks/${prev.id}/`)}>← {talkTitle(prev)}</a> : <span />}
-    {next && <a class="next" href={href(`/talks/${next.id}/`)}>{talkTitle(next)} →</a>}
-  </nav>
+  <div class="layout">
+    <div class="main">
+      {embed ? (
+        <div class="frame video">
+          <iframe
+            src={embed}
+            title={`${title}（影片）`}
+            loading="lazy"
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allowfullscreen
+          ></iframe>
+        </div>
+      ) : (
+        <p class="no-video">這個講題沒有錄影。</p>
+      )}
+
+      {t.description && <p class="description">{t.description}</p>}
+
+      {slides && (
+        <section class="slides-block">
+          <h2>簡報</h2>
+          <div class="frame slides">
+            <iframe src={slides} title={`${title}（簡報）`} loading="lazy" allowfullscreen></iframe>
+          </div>
+          <a class="small" href={t.slides_url!}>在 Google 簡報開啟</a>
+        </section>
+      )}
+    </div>
+
+    <aside class="side">
+      <dl>
+        <div><dt>場次</dt><dd><a href={href(`/events/${e.id}/`)}>{eventTitle(e)}</a></dd></div>
+        <div><dt>日期</dt><dd>{formatDate(e)}</dd></div>
+        {t.duration_min && <div><dt>長度</dt><dd class="num">{t.duration_min} 分鐘</dd></div>}
+        {t.video && <div><dt>影片授權</dt><dd>{license.url ? <a href={license.url}>{license.text}</a> : license.text}</dd></div>}
+        {t.video && <div><dt>原始影片</dt><dd><a href={t.video.url}>在 YouTube 觀看</a></dd></div>}
+        {t.slides_url && !slides && <div><dt>簡報</dt><dd><a href={t.slides_url}>開啟簡報資料夾</a></dd></div>}
+        {t.keywords.length > 0 && (
+          <div><dt>關鍵字</dt><dd class="kw">{t.keywords.map((k) => <a class="badge" href={href(`/?q=${encodeURIComponent(k)}`)}>{k}</a>)}</dd></div>
+        )}
+      </dl>
+
+      {siblings.length > 1 && (
+        <nav class="same-event" aria-label="同場講題">
+          <h2>同場講題</h2>
+          <ol>
+            {siblings.map((x) => (
+              <li class={x.id === t.id ? 'current' : ''}>
+                {x.id === t.id
+                  ? <span aria-current="page">{talkTitle(x)}</span>
+                  : <a href={href(`/talks/${x.id}/`)}>{talkTitle(x)}</a>}
+              </li>
+            ))}
+          </ol>
+        </nav>
+      )}
+    </aside>
+  </div>
 </Base>
 
 <style>
-  .speakers { list-style: none; padding: 0; margin: 0 0 16px; }
-  .video { position: relative; aspect-ratio: 16 / 9; margin: 16px 0; border-radius: var(--radius); overflow: hidden; background: #000; }
-  .video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-  .no-video { margin: 16px 0; }
+  .head { max-width: 50rem; margin-bottom: 28px; }
+  .speakers { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-wrap: wrap; gap: 8px 24px; }
+  .speakers li { display: flex; flex-direction: column; }
+  .speakers .name, .speakers a { font-weight: 600; }
+  .speakers .muted { font-size: .875rem; }
+
+  .layout { display: grid; gap: 40px; }
+  @media (min-width: 960px) { .layout { grid-template-columns: minmax(0, 1fr) 18rem; gap: 56px; } }
+
+  .frame { position: relative; overflow: hidden; border-radius: var(--r-lg); background: var(--surface-2); box-shadow: var(--shadow); }
+  .frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .video { aspect-ratio: 16 / 9; background: #0e0e11; }
   /* Google 簡報內嵌底下有一條約 30px 的控制列，所以比 16:9 高一點 */
-  .slides { position: relative; aspect-ratio: 16 / 9; padding-bottom: 30px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); }
-  .slides iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-  .small { font-size: .875rem; }
-  .description { white-space: pre-line; }
-  dd .chip { margin-right: 6px; text-decoration: none; }
-  .pager { display: flex; justify-content: space-between; gap: 16px; margin-top: 40px; font-size: .9rem; }
-  .pager .next { text-align: right; }
+  .slides { aspect-ratio: 16 / 9; padding-bottom: 30px; }
+  .no-video { margin: 0; padding: 40px 24px; border-radius: var(--r-lg); background: var(--surface-2); color: var(--muted); text-align: center; }
+
+  .description { white-space: pre-line; max-width: 65ch; font-size: 1.05rem; margin: 28px 0 0; }
+  .slides-block { margin-top: 48px; }
+  .slides-block h2 { margin-bottom: 16px; }
+  .small { display: inline-block; margin-top: 10px; font-size: .875rem; }
+
+  .side dl { margin: 0; display: grid; gap: 16px; }
+  .side dt { font-size: .8rem; color: var(--muted); }
+  .side dd { margin: 2px 0 0; overflow-wrap: anywhere; }
+  .kw { display: flex; flex-wrap: wrap; gap: 6px; }
+  .kw .badge { text-decoration: none; transition: background .2s, color .2s; }
+  .kw .badge:hover { background: var(--accent-soft); color: var(--accent); }
+
+  .same-event { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--line); }
+  .same-event h2 { font-size: .85rem; font-weight: 600; color: var(--muted); margin-bottom: 12px; letter-spacing: 0; }
+  .same-event ol { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; font-size: .925rem; }
+  .same-event li::marker { color: var(--muted); font-family: var(--mono); }
+  .same-event a { color: var(--text); text-decoration: none; }
+  .same-event a:hover { color: var(--accent); }
+  .same-event .current { font-weight: 600; }
+  .same-event .current::marker { color: var(--accent); }
 </style>
