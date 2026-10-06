@@ -23,5 +23,5 @@ pnpm-debug.log*
 # jetbrains setting folder
 .idea/
 
-# Claude Code local settings (contains personal paths)
-.claude/settings.local.json
+# 編輯器與工具的本機設定
+.claude/
