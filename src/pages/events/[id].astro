@@ -54,6 +54,7 @@ const description = `${formatDate(e)} ${eventTitle(e)}。${own.filter(hasContent
               {t.speakers.length > 0 && <span>{speakerNames(t)}</span>}
               {t.duration_min && <span>{t.duration_min} 分鐘</span>}
               {t.video?.youtube_id && <span class="chip">▶ 影片</span>}
+              {t.slides_url && <span class="chip">簡報</span>}
             </div>
           </div>
         </li>

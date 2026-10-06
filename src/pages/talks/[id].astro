@@ -1,6 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { LICENSE_URL, eventTitle, formatDate, getData, hasContent, href, speakerNames, talkTitle } from '../../lib/data';
+import { LICENSE_URL, eventTitle, slidesEmbed, formatDate, getData, hasContent, href, speakerNames, talkTitle } from '../../lib/data';
 
 // 空位（邀約中、沒有講者也沒有講題）不產生講題頁
 export async function getStaticPaths() {
@@ -16,6 +16,7 @@ const i = siblings.indexOf(t);
 const prev = siblings[i - 1];
 const next = siblings[i + 1];
 const title = t.kind === 'qa' ? `QA｜${e.theme ?? e.series}` : talkTitle(t);
+const slides = slidesEmbed(t.slides_url);
 const embed = t.video?.youtube_id
   ? `https://www.youtube-nocookie.com/embed/${t.video.youtube_id}${t.video.start_sec ? `?start=${t.video.start_sec}` : ''}`
   : null;
@@ -54,6 +55,16 @@ const embed = t.video?.youtube_id
 
   {t.description && <p class="description">{t.description}</p>}
 
+  {slides && (
+    <section>
+      <h2>簡報</h2>
+      <div class="slides">
+        <iframe src={slides} title={`${title}（簡報）`} loading="lazy" allowfullscreen></iframe>
+      </div>
+      <p class="muted small"><a href={t.slides_url!}>在 Google 簡報開啟</a></p>
+    </section>
+  )}
+
   <dl class="info card">
     <dt>場次</dt><dd><a href={href(`/events/${e.id}/`)}>{eventTitle(e)}</a></dd>
     <dt>日期</dt><dd>{formatDate(e)}</dd>
@@ -84,6 +95,10 @@ const embed = t.video?.youtube_id
   .video { position: relative; aspect-ratio: 16 / 9; margin: 16px 0; border-radius: var(--radius); overflow: hidden; background: #000; }
   .video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
   .no-video { margin: 16px 0; }
+  /* Google 簡報內嵌底下有一條約 30px 的控制列，所以比 16:9 高一點 */
+  .slides { position: relative; aspect-ratio: 16 / 9; padding-bottom: 30px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); }
+  .slides iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .small { font-size: .875rem; }
   .description { white-space: pre-line; }
   dd .chip { margin-right: 6px; text-decoration: none; }
   .pager { display: flex; justify-content: space-between; gap: 16px; margin-top: 40px; font-size: .9rem; }

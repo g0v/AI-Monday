@@ -86,6 +86,12 @@ export function rundown(e: Event, talks: Talk[]) {
 const toMinutes = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
 const fromMinutes = (n: number) => `${String(Math.floor(n / 60) % 24).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`;
 
+// Google 簡報（含上傳到 Drive 再用簡報開的 .pptx）可以內嵌；其他（Drive 資料夾、PDF 連結…）只放連結
+export function slidesEmbed(url: string | null) {
+  const m = url?.match(/^https:\/\/docs\.google\.com\/presentation\/d\/([\w-]+)/);
+  return m ? `https://docs.google.com/presentation/d/${m[1]}/embed?start=false&loop=false` : null;
+}
+
 export const LICENSE_URL: Record<string, string> = {
   'CC-BY': 'https://creativecommons.org/licenses/by/4.0/deed.zh-hant',
   'CC-BY-ND': 'https://creativecommons.org/licenses/by-nd/4.0/deed.zh-hant',

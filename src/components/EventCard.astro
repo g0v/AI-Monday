@@ -30,6 +30,7 @@ const talkText = (t: Talk) =>
           )}
           {t.speakers.length > 0 && <span class="muted">— {speakerNames(t)}</span>}
           {t.video?.youtube_id && <span class="chip" title="有影片">▶ 影片</span>}
+          {t.slides_url && <span class="chip">簡報</span>}
         </li>
       ))}
     </ul>
