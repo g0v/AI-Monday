@@ -1,0 +1,11 @@
+---
+// 沒有這一頁時，Cloudflare Pages 會把任何不存在的網址都回成首頁（狀態碼 200），
+// 打錯的網址看起來就像正常頁面。
+import Base from '../layouts/Base.astro';
+import { href } from '../lib/data';
+---
+<Base title="找不到這一頁">
+  <h1>找不到這一頁</h1>
+  <p class="muted">可能是網址打錯，或這個講題還在邀約講者、還沒有自己的頁面。</p>
+  <p><a href={href('/')}>回到全部場次</a></p>
+</Base>
