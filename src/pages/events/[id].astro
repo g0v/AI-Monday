@@ -1,0 +1,95 @@
+---
+import Base from '../../layouts/Base.astro';
+import { eventTitle, formatDate, getData, hasContent, href, rundown, speakerNames, talkTitle, today } from '../../lib/data';
+
+export async function getStaticPaths() {
+  const { events } = await getData();
+  return events.map((e) => ({ params: { id: e.id }, props: { id: e.id } }));
+}
+
+const { events, talks } = await getData();
+const e = events.find((x) => x.id === Astro.props.id)!;
+const own = talks.filter((t) => t.event_id === e.id).sort((a, b) => a.order - b.order);
+const rows = rundown(e, own);
+const isPast = e.date < today;
+const i = events.indexOf(e);
+const prev = events.slice(0, i).reverse().find((x) => x.series === e.series);
+const next = events.slice(i + 1).find((x) => x.series === e.series);
+const description = `${formatDate(e)} ${eventTitle(e)}。${own.filter(hasContent).map(talkTitle).join('、')}`;
+---
+<Base title={eventTitle(e)} description={description}>
+  <nav class="breadcrumb"><a href={href('/')}>全部場次</a> › {e.series}</nav>
+
+  <div class="meta">
+    <span class="chip">{e.series}</span>
+    {e.status && <span class={`chip${e.status === '停辦' ? ' accent' : ''}`}>{e.status}</span>}
+  </div>
+  <h1>{e.theme ?? e.series}</h1>
+
+  <dl class="info card">
+    <dt>日期</dt><dd><time datetime={e.date}>{formatDate(e)}</time>{e.start_time && ` ${e.start_time} 開始`}</dd>
+    {e.format && (<><dt>形式</dt><dd>{e.format}</dd></>)}
+    {e.venue && (<><dt>地點</dt><dd>{e.venue}</dd></>)}
+    {e.notes_url && (<><dt>共筆</dt><dd><a href={e.notes_url}>{e.notes_url}</a></dd></>)}
+    {e.sponsor && (<><dt>贊助</dt><dd>{e.sponsor}</dd></>)}
+  </dl>
+
+  <h2>{isPast ? '議程' : '預定議程'}</h2>
+  {own.length === 0 ? (
+    <p class="muted">議程還沒排定。</p>
+  ) : (
+    <ol class="rundown">
+      {rows.map(({ talk: t, at }) => (
+        <li class={t.open_slot ? 'slot' : ''}>
+          <span class="at">{at ?? ''}</span>
+          <div>
+            {t.open_slot ? (
+              <span class="muted">（講者邀約中）</span>
+            ) : t.kind === 'qa' ? (
+              <strong>QA</strong>
+            ) : (
+              <a class="title" href={href(`/talks/${t.id}/`)}>{talkTitle(t)}</a>
+            )}
+            <div class="meta">
+              {t.speakers.length > 0 && <span>{speakerNames(t)}</span>}
+              {t.duration_min && <span>{t.duration_min} 分鐘</span>}
+              {t.video?.youtube_id && <span class="chip">▶ 影片</span>}
+            </div>
+          </div>
+        </li>
+      ))}
+    </ol>
+  )}
+
+  {e.promotions.length > 0 && (
+    <>
+      <h2>宣傳事項</h2>
+      <ul class="promos">
+        {e.promotions.map((p) => {
+          // 把文字裡的網址變成連結；其他照原文
+          const parts = p.text.split(/(https?:\/\/\S+)/);
+          return <li>{parts.map((s) => (/^https?:\/\//.test(s) ? <a href={s}>{s}</a> : s))}</li>;
+        })}
+      </ul>
+    </>
+  )}
+
+  <nav class="pager">
+    {prev ? <a href={href(`/events/${prev.id}/`)}>← 上一場 {e.series}<br /><span class="muted">{formatDate(prev)}</span></a> : <span />}
+    {next && <a class="next" href={href(`/events/${next.id}/`)}>下一場 {e.series} →<br /><span class="muted">{formatDate(next)}</span></a>}
+  </nav>
+</Base>
+
+<style>
+  .rundown { list-style: none; padding: 0; margin: 0; }
+  .rundown li {
+    display: grid; grid-template-columns: 3.5em 1fr; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--line);
+  }
+  .rundown .at { font-variant-numeric: tabular-nums; color: var(--muted); }
+  .rundown .title { font-weight: 600; }
+  .promos { padding-left: 1.1em; }
+  .promos li { white-space: pre-line; overflow-wrap: anywhere; margin-bottom: 4px; }
+  .pager { display: flex; justify-content: space-between; gap: 16px; margin-top: 40px; font-size: .9rem; }
+  .pager .next { text-align: right; }
+</style>

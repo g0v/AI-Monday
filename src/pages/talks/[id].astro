@@ -1,0 +1,91 @@
+---
+import Base from '../../layouts/Base.astro';
+import { LICENSE_URL, eventTitle, formatDate, getData, hasContent, href, speakerNames, talkTitle } from '../../lib/data';
+
+// 空位（邀約中、沒有講者也沒有講題）不產生講題頁
+export async function getStaticPaths() {
+  const { talks } = await getData();
+  return talks.filter(hasContent).map((t) => ({ params: { id: t.id }, props: { id: t.id } }));
+}
+
+const { events, talks } = await getData();
+const t = talks.find((x) => x.id === Astro.props.id)!;
+const e = events.find((x) => x.id === t.event_id)!;
+const siblings = talks.filter((x) => x.event_id === e.id && hasContent(x)).sort((a, b) => a.order - b.order);
+const i = siblings.indexOf(t);
+const prev = siblings[i - 1];
+const next = siblings[i + 1];
+const title = t.kind === 'qa' ? `QA｜${e.theme ?? e.series}` : talkTitle(t);
+const embed = t.video?.youtube_id
+  ? `https://www.youtube-nocookie.com/embed/${t.video.youtube_id}${t.video.start_sec ? `?start=${t.video.start_sec}` : ''}`
+  : null;
+---
+<Base title={title} description={t.description ?? `${speakerNames(t)}｜${eventTitle(e)}`}>
+  <nav class="breadcrumb">
+    <a href={href('/')}>全部場次</a> › <a href={href(`/events/${e.id}/`)}>{formatDate(e)} {e.theme ?? e.series}</a>
+  </nav>
+
+  <h1>{title}</h1>
+  {t.speakers.length > 0 && (
+    <ul class="speakers">
+      {t.speakers.map((s) => (
+        <li>
+          {s.url ? <a href={s.url}>{s.name}</a> : <strong>{s.name}</strong>}
+          {s.affiliation && <span class="muted">｜{s.affiliation}</span>}
+        </li>
+      ))}
+    </ul>
+  )}
+
+  {embed ? (
+    <div class="video">
+      <iframe
+        src={embed}
+        title={`${title}（影片）`}
+        loading="lazy"
+        allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerpolicy="strict-origin-when-cross-origin"
+        allowfullscreen
+      ></iframe>
+    </div>
+  ) : (
+    <p class="card muted no-video">這個講題沒有影片紀錄。</p>
+  )}
+
+  {t.description && <p class="description">{t.description}</p>}
+
+  <dl class="info card">
+    <dt>場次</dt><dd><a href={href(`/events/${e.id}/`)}>{eventTitle(e)}</a></dd>
+    <dt>日期</dt><dd>{formatDate(e)}</dd>
+    {t.duration_min && (<><dt>長度</dt><dd>{t.duration_min} 分鐘</dd></>)}
+    {t.slides_url && (<><dt>簡報</dt><dd><a href={t.slides_url}>{t.slides_url}</a></dd></>)}
+    {t.video && (<><dt>影片</dt><dd><a href={t.video.url}>在 YouTube 上看</a></dd></>)}
+    {t.video && (
+      <>
+        <dt>授權</dt>
+        <dd>
+          {t.license
+            ? <a href={LICENSE_URL[t.license] ?? '#'}>{t.license.replace(/-/g, ' ')} 4.0</a>
+            : t.license_status === 'pending' ? '確認中' : '未標示'}
+        </dd>
+      </>
+    )}
+    {t.keywords.length > 0 && (<><dt>關鍵字</dt><dd>{t.keywords.map((k) => <a class="chip" href={href(`/?q=${encodeURIComponent(k)}`)}>{k}</a>)}</dd></>)}
+  </dl>
+
+  <nav class="pager">
+    {prev ? <a href={href(`/talks/${prev.id}/`)}>← {talkTitle(prev)}</a> : <span />}
+    {next && <a class="next" href={href(`/talks/${next.id}/`)}>{talkTitle(next)} →</a>}
+  </nav>
+</Base>
+
+<style>
+  .speakers { list-style: none; padding: 0; margin: 0 0 16px; }
+  .video { position: relative; aspect-ratio: 16 / 9; margin: 16px 0; border-radius: var(--radius); overflow: hidden; background: #000; }
+  .video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .no-video { margin: 16px 0; }
+  .description { white-space: pre-line; }
+  dd .chip { margin-right: 6px; text-decoration: none; }
+  .pager { display: flex; justify-content: space-between; gap: 16px; margin-top: 40px; font-size: .9rem; }
+  .pager .next { text-align: right; }
+</style>

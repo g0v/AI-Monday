@@ -1,0 +1,100 @@
+---
+import { href } from '../lib/data';
+
+interface Props { title?: string; description?: string }
+const { title, description = 'g0v 揪松團 AI Monday 與相關 AI 主題議程的場次、講題與影片紀錄。' } = Astro.props;
+const fullTitle = title ? `${title}｜AI Monday` : 'AI Monday 講題紀錄';
+---
+<!doctype html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap">
+        <a class="brand" href={href('/')}>AI Monday <span>講題紀錄</span></a>
+      </div>
+    </header>
+    <main class="wrap">
+      <slot />
+    </main>
+    <footer class="wrap site-footer">
+      <p>
+        資料由 <a href="https://jothon.g0v.tw">g0v 揪松團</a> 維護，每天自動更新。
+        開放資料：<a href="https://data.civictech.tw/v0/aimonday/events.json">場次</a>／<a href="https://data.civictech.tw/v0/aimonday/talks.json">講題</a>（JSON）。
+        影片授權依各講題標示。
+      </p>
+    </footer>
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --bg: #fbfaf7;
+    --surface: #ffffff;
+    --text: #1d1d1f;
+    --muted: #63636b;
+    --line: #e4e2dc;
+    --accent: #c2410c;
+    --accent-soft: #fdebe0;
+    --chip: #f1efe9;
+    --radius: 12px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141416;
+      --surface: #1c1c1f;
+      --text: #ececee;
+      --muted: #a1a1aa;
+      --line: #2e2e33;
+      --accent: #fb923c;
+      --accent-soft: #3a2316;
+      --chip: #26262b;
+      color-scheme: dark;
+    }
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, 'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+    line-height: 1.7;
+  }
+  a { color: var(--accent); text-underline-offset: 3px; }
+  a:hover { text-decoration-thickness: 2px; }
+  h1, h2, h3 { line-height: 1.35; margin: 0 0 .5em; }
+  h1 { font-size: clamp(1.5rem, 4vw, 2rem); }
+  h2 { font-size: 1.2rem; margin-top: 2rem; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px; }
+  .site-header { border-bottom: 1px solid var(--line); background: var(--surface); }
+  .site-header .wrap { display: flex; align-items: center; min-height: 56px; }
+  .brand { font-weight: 700; font-size: 1.1rem; color: var(--text); text-decoration: none; }
+  .brand span { color: var(--muted); font-weight: 400; }
+  main { padding-top: 24px; padding-bottom: 48px; }
+  .site-footer { border-top: 1px solid var(--line); padding-top: 16px; padding-bottom: 32px; color: var(--muted); font-size: .875rem; }
+
+  .muted { color: var(--muted); }
+  .chip {
+    display: inline-block; padding: 0 .6em; border-radius: 999px;
+    background: var(--chip); color: var(--muted); font-size: .8rem; line-height: 1.8; white-space: nowrap;
+  }
+  .chip.accent { background: var(--accent-soft); color: var(--accent); }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px; margin-bottom: 12px;
+  }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: .875rem; color: var(--muted); }
+  dl.info { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; }
+  dl.info dt { color: var(--muted); }
+  dl.info dd { margin: 0; overflow-wrap: anywhere; }
+  .breadcrumb { font-size: .875rem; margin-bottom: 12px; }
+</style>

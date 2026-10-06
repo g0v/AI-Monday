@@ -1,0 +1,111 @@
+---
+import Base from '../layouts/Base.astro';
+import EventCard from '../components/EventCard.astro';
+import { getData, hasContent, today } from '../lib/data';
+
+const { events, talks } = await getData();
+const talksOf = (id: string) => talks.filter((t) => t.event_id === id);
+
+// 即將舉行：只列已經有講者或講題的場次。之後每月的空場次（邀約中、還沒任何內容）不佔版面
+const upcoming = events.filter((e) => e.date >= today && e.status !== '停辦' && talksOf(e.id).some(hasContent));
+const pendingCount = events.filter((e) => e.date >= today && e.status !== '停辦').length - upcoming.length;
+const past = events.filter((e) => e.date < today).reverse();
+const series = [...new Set(events.map((e) => e.series))];
+const videoCount = talks.filter((t) => t.video?.youtube_id).length;
+---
+<Base>
+  <h1>AI Monday 講題紀錄</h1>
+  <p class="muted lead">
+    g0v 揪松團的 AI Monday 線上講座，以及國會松、COSCUP 的 AI 主題議程。
+    共 {past.length} 場已舉辦、{videoCount} 支影片。
+  </p>
+
+  <form class="filters" role="search" onsubmit="return false">
+    <input id="q" type="search" placeholder="搜尋講題、講者、單位、關鍵字" aria-label="搜尋" autocomplete="off" />
+    <div class="series" role="radiogroup" aria-label="系列">
+      <label><input type="radio" name="series" value="" checked /> 全部</label>
+      {series.map((s) => <label><input type="radio" name="series" value={s} /> {s}</label>)}
+    </div>
+  </form>
+  <p id="empty" class="muted" hidden>沒有符合的場次。</p>
+
+  {upcoming.length > 0 && (
+    <section data-section>
+      <h2>即將舉行</h2>
+      {upcoming.map((e) => <EventCard event={e} talks={talksOf(e.id)} />)}
+    </section>
+  )}
+  {pendingCount > 0 && <p class="muted pending">之後還有 {pendingCount} 場正在邀約講者。</p>}
+
+  <section data-section>
+    <h2>過去場次</h2>
+    {past.map((e) => <EventCard event={e} talks={talksOf(e.id)} />)}
+  </section>
+</Base>
+
+<script>
+  const q = document.querySelector<HTMLInputElement>('#q')!;
+  const radios = [...document.querySelectorAll<HTMLInputElement>('input[name="series"]')];
+  const cards = [...document.querySelectorAll<HTMLElement>('.event-card')];
+  const empty = document.querySelector<HTMLElement>('#empty')!;
+  const pending = document.querySelector<HTMLElement>('.pending');
+
+  function apply() {
+    const terms = q.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const series = radios.find((r) => r.checked)?.value ?? '';
+    const matches = (text: string) => terms.every((t) => text.includes(t));
+    let visible = 0;
+    for (const card of cards) {
+      const items = [...card.querySelectorAll<HTMLElement>('li[data-search]')];
+      const eventHit = matches(card.dataset.search!);
+      // 場次本身符合就整場顯示；否則只留符合的講題
+      let anyTalk = false;
+      for (const li of items) {
+        const hit = !terms.length || eventHit || matches(`${card.dataset.search} ${li.dataset.search}`);
+        li.hidden = !hit;
+        anyTalk ||= hit;
+      }
+      const show = (!series || card.dataset.series === series) && (!terms.length || eventHit || anyTalk);
+      card.hidden = !show;
+      if (show) visible++;
+    }
+    for (const sec of document.querySelectorAll<HTMLElement>('[data-section]')) {
+      sec.hidden = ![...sec.querySelectorAll<HTMLElement>('.event-card')].some((c) => !c.hidden);
+    }
+    if (pending) pending.hidden = terms.length > 0 || !!series;
+    empty.hidden = visible > 0;
+
+    const url = new URL(location.href);
+    terms.length ? url.searchParams.set('q', q.value.trim()) : url.searchParams.delete('q');
+    series ? url.searchParams.set('series', series) : url.searchParams.delete('series');
+    history.replaceState(null, '', url);
+  }
+
+  // 從網址還原（搜尋結果可以分享）
+  const params = new URLSearchParams(location.search);
+  q.value = params.get('q') ?? '';
+  const s = params.get('series');
+  if (s) radios.forEach((r) => (r.checked = r.value === s));
+
+  q.addEventListener('input', apply);
+  radios.forEach((r) => r.addEventListener('change', apply));
+  apply();
+</script>
+
+<style>
+  .lead { margin-top: -.25em; }
+  .filters { position: sticky; top: 0; z-index: 1; background: var(--bg); padding: 12px 0; display: grid; gap: 10px; }
+  #q {
+    width: 100%; font: inherit; padding: 10px 14px; border-radius: var(--radius);
+    border: 1px solid var(--line); background: var(--surface); color: var(--text);
+  }
+  #q:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .series { display: flex; flex-wrap: wrap; gap: 8px; }
+  .series label {
+    display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
+    padding: 2px 12px; border-radius: 999px; background: var(--chip); font-size: .875rem;
+  }
+  .series input { accent-color: var(--accent); margin: 0; }
+  .series label:has(input:checked) { background: var(--accent-soft); color: var(--accent); }
+  .pending { font-size: .875rem; }
+</style>
