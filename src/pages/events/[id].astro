@@ -1,6 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { eventTitle, formatDate, getData, hasContent, href, rundown, speakerNames, talkTitle, thumbUrl, today } from '../../lib/data';
+import { eventTitle, formatDate, getData, hasContent, href, rundown, speakerNames, talkTitle, thumbUrl, timeRange, today } from '../../lib/data';
 
 export async function getStaticPaths() {
   const { events } = await getData();
@@ -19,7 +19,7 @@ const description = `${formatDate(e)} ${eventTitle(e)}。${own.filter(hasContent
 const cover = own.map(thumbUrl).find(Boolean) ?? undefined;
 const facts = [
   ['日期', formatDate(e)],
-  ['時間', e.start_time ? `${e.start_time} 開始` : null],
+  ['時間', timeRange(e)],
   ['形式', e.format],
   ['地點', e.venue],
   ['贊助', e.sponsor],

@@ -1,0 +1,15 @@
+---
+import Base from '../../layouts/Base.astro';
+import CalendarMonth from '../../components/CalendarMonth.astro';
+import { calendarMonths, getData } from '../../lib/data';
+
+export async function getStaticPaths() {
+  return calendarMonths((await getData()).events).map((month) => ({ params: { month } }));
+}
+
+const { month } = Astro.params;
+const [y, m] = month!.split('-').map(Number);
+---
+<Base title={`${y} 年 ${m} 月日曆`} description={`AI Monday 與相關 AI 主題議程 ${y} 年 ${m} 月的場次。`}>
+  <CalendarMonth month={month!} />
+</Base>

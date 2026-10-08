@@ -1,5 +1,5 @@
 ---
-import { eventTitle, hasContent, href, monthDay, speakerNames, talkTitle, type Event, type Talk } from '../lib/data';
+import { eventTitle, hasContent, href, monthDay, speakerNames, talkTitle, timeRange, type Event, type Talk } from '../lib/data';
 
 interface Props { event: Event; talks: Talk[] }
 const { event: e, talks } = Astro.props;
@@ -19,7 +19,7 @@ const talkText = (t: Talk) =>
   <div class="body">
     <div class="meta">
       <span class="badge">{e.series}</span>
-      {e.start_time && <span class="mono">{e.start_time}</span>}
+      {e.start_time && <span class="mono">{e.end_time ? timeRange(e) : e.start_time}</span>}
       {e.format && <span>{e.format}</span>}
       {e.status === '停辦' && <span class="badge accent">停辦</span>}
     </div>

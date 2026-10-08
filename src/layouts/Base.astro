@@ -28,7 +28,10 @@ const fullTitle = title ? `${title}｜AI Monday` : 'AI Monday 講題紀錄';
     <header class="site-header">
       <div class="wrap">
         <a class="brand" href={href('/')}><span class="mark">AI</span>Monday 講題紀錄</a>
-        <a class="nav-link" href="https://data.civictech.tw/">開放資料</a>
+        <nav class="nav">
+          <a class="nav-link" href={href('/calendar/')}>日曆</a>
+          <a class="nav-link" href="https://data.civictech.tw/">開放資料</a>
+        </nav>
       </div>
     </header>
     <main id="main" class="wrap">
@@ -118,6 +121,7 @@ const fullTitle = title ? `${title}｜AI Monday` : 'AI Monday 講題紀錄';
   .site-header .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; }
   .brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text); text-decoration: none; letter-spacing: -.01em; }
   .brand .mark { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: var(--r-sm); background: var(--accent); color: #fff; font: 600 .8rem/1 var(--mono); }
+  .nav { display: flex; gap: 20px; }
   .nav-link { color: var(--muted); text-decoration: none; font-size: .9rem; }
   .nav-link:hover { color: var(--text); }
 

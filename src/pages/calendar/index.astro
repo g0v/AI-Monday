@@ -1,0 +1,12 @@
+---
+import Base from '../../layouts/Base.astro';
+import CalendarMonth from '../../components/CalendarMonth.astro';
+import { calendarMonths, getData, monthOf, today } from '../../lib/data';
+
+// /calendar/ 顯示建置當天所在的月份（網站每天重建，所以「本月」夠準）
+const months = calendarMonths((await getData()).events);
+const month = months.includes(monthOf(today)) ? monthOf(today) : months[months.length - 1];
+---
+<Base title="日曆" description="AI Monday 與相關 AI 主題議程的場次日曆，可訂閱到 Google、Apple 日曆。">
+  <CalendarMonth month={month} />
+</Base>

@@ -13,7 +13,8 @@ export interface Event {
   id: string; date: string; weekday: string;
   series: string; series_slug: string;
   theme: string | null; status: string | null;
-  start_time: string | null; format: string | null; venue: string | null;
+  // end_time：API 2026-10 才加的欄位，舊資料沒有這個 key
+  start_time: string | null; end_time?: string | null; format: string | null; venue: string | null;
   notes_url: string | null; sponsor: string | null;
   promotions: Promotion[];
   talk_ids: string[];
@@ -74,6 +75,12 @@ export function formatDate(e: Event) {
   return `${y}/${Number(m)}/${Number(d)}（${e.weekday}）`;
 }
 
+// 「20:00–21:30」；只有開始時間就寫「20:00 開始」
+export function timeRange(e: Event) {
+  if (!e.start_time) return null;
+  return e.end_time ? `${e.start_time}–${e.end_time}` : `${e.start_time} 開始`;
+}
+
 // rundown：從開始時間依序加上每個講題長度。沒有開始時間就只列順序
 export function rundown(e: Event, talks: Talk[]) {
   let minutes = e.start_time ? toMinutes(e.start_time) : null;
@@ -105,6 +112,38 @@ export const LICENSE_URL: Record<string, string> = {
   'CC-BY-ND': 'https://creativecommons.org/licenses/by-nd/4.0/deed.zh-hant',
   'CC-BY-SA': 'https://creativecommons.org/licenses/by-sa/4.0/deed.zh-hant',
 };
+
+// ---------- 日曆 ----------
+
+// 「已排定」「已完成」的時間已談定、「停辦」要通知已訂閱的人劃掉；「邀約中」還沒確定，不進 .ics
+export const inIcs = (e: Event) => e.status === '已排定' || e.status === '已完成' || e.status === '停辦';
+
+export const monthOf = (date: string) => date.slice(0, 7);
+
+// 從第一場到最後一場（含今天所在的月）的每個月，「YYYY-MM」
+export function calendarMonths(events: Event[]) {
+  const all = [...events.map((e) => monthOf(e.date)), monthOf(today)].sort();
+  const months: string[] = [];
+  for (let m = all[0]; m <= all[all.length - 1]; m = shiftMonth(m, 1)) months.push(m);
+  return months;
+}
+
+export function shiftMonth(ym: string, n: number) {
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(Date.UTC(y, m - 1 + n, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+// 月曆格子：週日開頭，前後補滿成整週。每格是「YYYY-MM-DD」，不在本月的格子為 null
+export function monthGrid(ym: string) {
+  const [y, m] = ym.split('-').map(Number);
+  const first = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
+  const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const cells: (string | null)[] = Array(first).fill(null);
+  for (let d = 1; d <= days; d++) cells.push(`${ym}-${String(d).padStart(2, '0')}`);
+  while (cells.length % 7) cells.push(null);
+  return cells;
+}
 
 // 站內連結都經過這裡，之後決定掛在子路徑（base）時只改 astro.config
 export const href = (p: string) => `${import.meta.env.BASE_URL.replace(/\/$/, '')}${p}`;

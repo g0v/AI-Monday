@@ -1,0 +1,165 @@
+---
+import { calendarMonths, eventTitle, getData, hasContent, href, monthDay, monthGrid, monthOf, shiftMonth, talkTitle, timeRange, today, type Event } from '../lib/data';
+
+interface Props { month: string }
+const { month } = Astro.props;
+const { events, talks } = await getData();
+const months = calendarMonths(events);
+const prev = months.includes(shiftMonth(month, -1)) ? shiftMonth(month, -1) : null;
+const next = months.includes(shiftMonth(month, 1)) ? shiftMonth(month, 1) : null;
+const thisMonth = monthOf(today);
+
+const own = events.filter((e) => monthOf(e.date) === month);
+const onDay = (d: string) => own.filter((e) => e.date === d);
+const cells = monthGrid(month);
+const [y, m] = month.split('-').map(Number);
+
+const label = (e: Event) => e.theme ?? e.series;
+const cls = (e: Event) => (e.status === '停辦' ? 'cancelled' : e.status === '邀約中' ? 'tentative' : '');
+const when = (e: Event) => (e.status === '邀約中' ? '邀約中・時間未定' : timeRange(e));
+const shownTalks = (e: Event) => talks.filter((t) => t.event_id === e.id && hasContent(t));
+---
+<header class="cal-head">
+  <h1 class="page-title"><span class="num">{y}</span> 年 <span class="num">{m}</span> 月</h1>
+  <nav class="pager" aria-label="切換月份">
+    {prev ? <a href={href(`/calendar/${prev}/`)} rel="prev">← 上個月</a> : <span class="off">← 上個月</span>}
+    {month !== thisMonth && months.includes(thisMonth) && <a href={href(`/calendar/${thisMonth}/`)}>本月</a>}
+    {next ? <a href={href(`/calendar/${next}/`)} rel="next">下個月 →</a> : <span class="off">下個月 →</span>}
+  </nav>
+</header>
+
+<div class="grid panel" role="grid" aria-label={`${y} 年 ${m} 月`}>
+  <div class="row week" role="row">
+    {'日一二三四五六'.split('').map((w) => <div role="columnheader">{w}</div>)}
+  </div>
+  {Array.from({ length: cells.length / 7 }, (_, i) => cells.slice(i * 7, i * 7 + 7)).map((week) => (
+    <div class="row" role="row">
+      {week.map((d) => (
+        <div role="gridcell" class:list={['cell', { blank: !d, today: d === today, has: d && onDay(d).length }]}>
+          {d && <span class="d num">{Number(d.slice(8))}</span>}
+          {d && onDay(d).map((e) => (
+            <a class:list={['chip', cls(e)]} href={href(`/events/${e.id}/`)} title={`${eventTitle(e)}${when(e) ? `・${when(e)}` : ''}`}>
+              {e.start_time && e.status !== '邀約中' && <span class="t mono">{e.start_time}</span>}
+              <span class="l">{label(e)}</span>
+            </a>
+          ))}
+        </div>
+      ))}
+    </div>
+  ))}
+</div>
+
+<section class="list">
+  <h2>這個月的場次</h2>
+  {own.length === 0 ? (
+    <p class="muted">這個月沒有場次。</p>
+  ) : (
+    <ul>
+      {own.map((e) => (
+        <li class={cls(e)}>
+          <a class="date" href={href(`/events/${e.id}/`)}>
+            <span class="day mono">{monthDay(e).day}</span>
+            <span class="muted">週{e.weekday}</span>
+          </a>
+          <div>
+            <div class="meta">
+              <span class="badge">{e.series}</span>
+              {when(e) && <span class={e.status === '邀約中' ? '' : 'mono'}>{when(e)}</span>}
+              {e.status === '停辦' && <span class="badge accent">停辦</span>}
+            </div>
+            <a class="title" href={href(`/events/${e.id}/`)}>{label(e)}</a>
+            {shownTalks(e).length > 0 && <p class="talks muted">{shownTalks(e).map(talkTitle).join('、')}</p>}
+          </div>
+        </li>
+      ))}
+    </ul>
+  )}
+</section>
+
+<section class="subscribe panel" id="subscribe">
+  <h2>訂閱到你的日曆</h2>
+  <p>
+    訂閱之後，排定的場次會自動出現在你的日曆裡，時間異動或停辦也會跟著更新，不用再等通知。還在邀約講者、時間未定的場次不會放進去。
+  </p>
+  <div class="actions">
+    <a class="btn primary" data-gcal href="https://calendar.google.com/calendar/r">加到 Google 日曆</a>
+    <button class="btn" type="button" data-copy>複製訂閱網址</button>
+    <a class="btn" href={href('/calendar.ics')} download>下載 .ics</a>
+  </div>
+  <p class="hint muted" data-copied hidden>已複製。Apple 日曆：檔案 → 新增日曆訂閱，貼上網址。Outlook：新增行事曆 → 從網際網路訂閱。</p>
+  <p class="hint muted">Google 日曆大約半天到一天才會抓一次新資料，異動不會馬上出現。</p>
+</section>
+
+<script>
+  // 訂閱網址要絕對網址，正式網域還沒定，所以在瀏覽器端組
+  const ics = new URL(`${import.meta.env.BASE_URL.replace(/\/$/, '')}/calendar.ics`, location.origin).href;
+  const gcal = document.querySelector<HTMLAnchorElement>('[data-gcal]');
+  if (gcal) gcal.href = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(ics.replace(/^https?:/, 'webcal:'))}`;
+  document.querySelector('[data-copy]')?.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(ics); } catch { prompt('訂閱網址', ics); return; }
+    document.querySelector<HTMLElement>('[data-copied]')!.hidden = false;
+  });
+</script>
+
+<style>
+  .cal-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; margin-bottom: 24px; }
+  .pager { display: flex; gap: 16px; font-size: .95rem; }
+  .pager a { text-decoration: none; }
+  .pager .off { color: var(--line); }
+
+  .grid { overflow: hidden; }
+  .row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .week div { padding: 10px 8px; font-size: .8rem; color: var(--muted); text-align: center; border-bottom: 1px solid var(--line); }
+  .cell { min-height: 7.5rem; padding: 6px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .row > .cell:last-child { border-right: 0; }
+  .row:last-child > .cell { border-bottom: 0; }
+  .cell.blank { background: color-mix(in srgb, var(--surface-2) 45%, transparent); }
+  .d { font-size: .85rem; color: var(--muted); width: 1.75rem; height: 1.75rem; display: inline-grid; place-items: center; border-radius: 999px; }
+  .today .d { background: var(--accent); color: #fff; font-weight: 600; }
+
+  .chip {
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    padding: 3px 6px; border-radius: var(--r-sm); font-size: .78rem; line-height: 1.35;
+    background: var(--accent-soft); color: var(--accent); text-decoration: none;
+  }
+  .chip:hover { filter: brightness(.96); }
+  .chip .t { margin-right: 6px; font-size: .72rem; }
+  .chip.tentative { background: transparent; color: var(--muted); outline: 1px dashed var(--line); outline-offset: -1px; }
+  .chip.cancelled { background: var(--surface-2); color: var(--muted); text-decoration: line-through; }
+
+  /* 手機：格子太窄放不下標題，只留圓點，細節看下方列表 */
+  @media (max-width: 639px) {
+    .cell { min-height: 3.25rem; align-items: center; padding: 4px 2px; }
+    .chip { display: block; width: 8px; height: 8px; padding: 0; border-radius: 999px; background: var(--accent); }
+    .chip > * { display: none; }
+    .chip.tentative { background: transparent; outline: 1.5px solid var(--muted); outline-offset: -1.5px; }
+    .chip.cancelled { background: var(--line); }
+  }
+
+  .list { margin-top: 48px; }
+  .list h2 { margin-bottom: 8px; }
+  .list ul { list-style: none; margin: 0; padding: 0; }
+  .list li { display: grid; grid-template-columns: 3.5rem 1fr; gap: 16px; padding: 18px 0; border-top: 1px solid var(--line); }
+  .list .date { display: flex; flex-direction: column; text-decoration: none; color: var(--text); }
+  .list .day { font-size: 1.75rem; line-height: 1; font-weight: 500; letter-spacing: -.03em; }
+  .list .date .muted { font-size: .8rem; margin-top: 4px; }
+  .list .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: .85rem; color: var(--muted); }
+  .list .title { display: inline-block; margin-top: 4px; font-weight: 600; color: var(--text); text-decoration: none; }
+  .list .title:hover { color: var(--accent); }
+  .list .talks { margin: 4px 0 0; font-size: .875rem; }
+  .list li.cancelled .title { text-decoration: line-through; color: var(--muted); }
+
+  .subscribe { margin-top: 48px; padding: 24px; }
+  @media (min-width: 768px) { .subscribe { padding: 32px; } }
+  .subscribe p { margin: 8px 0 0; max-width: 40rem; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 4px; }
+  .btn {
+    display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: var(--r-md);
+    border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 500 .9rem var(--font);
+    text-decoration: none; cursor: pointer;
+  }
+  .btn:hover { border-color: var(--muted); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .hint { font-size: .85rem; }
+</style>
