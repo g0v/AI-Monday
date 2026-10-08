@@ -10,7 +10,7 @@ g0v 揪松團每月一場的 AI Monday 線上講座，以及 g0v 國會松、COS
 | `/events/{id}/` | 單一場次：時間、形式、地點、共筆、議程（有開始時間就推算每個講題的時間）、宣傳事項 |
 | `/talks/{id}/` | 單一講題：講者、錄影（從這個講題在整場錄影裡的起始時間開始播）、簡介、簡報、影片授權 |
 | `/calendar/`、`/calendar/{YYYY-MM}/` | 月曆，可前後翻月。手機上格子只顯示圓點，細節看下方的當月場次列表 |
-| `/calendar.ics` | 可訂閱的日曆。只收「已排定」「已完成」「停辦」的場次（停辦標成取消，讓訂閱者的日曆自動劃掉）；還在邀約的不收 |
+| `/calendar.ics` | 可訂閱的日曆。只收「已排定」「已完成」且有起訖時間的場次，以及「停辦」的場次（標成取消，讓訂閱者的日曆自動劃掉）；還在邀約的不收 |
 
 還在邀約講者的空位只會出現在場次頁，不會有自己的講題頁。
 
@@ -59,7 +59,20 @@ AIMONDAY_DATA=path/to/v0/aimonday npm run build
 
 ## 部署
 
-`npm run build` 產出的 `dist/` 是純靜態檔，放在任何靜態主機都可以。要讓網站跟著資料更新，就每天重新建置一次。
+目前放在 GitHub Pages：<https://g0v.github.io/AI-Monday/>。`.github/workflows/deploy.yml` 在 push 到 main 時、以及每天台灣時間 05:00（資料在 04:00 同步完之後）建置並部署。
+
+`npm run build` 產出的 `dist/` 是純靜態檔，搬到別的主機也可以。網址定在 `astro.config.mjs` 的 `site` 與 `base`；部署到根目錄時用環境變數蓋掉：
+
+```bash
+SITE=https://example.org BASE=/ npm run build
+```
+
+## 資料檢查
+
+同一個 workflow 也會讀 [report.json](https://data.civictech.tw/v0/aimonday/report.json)（資料同步時順手產生的檢查結果）。Sheet 有要修的地方，就開一張標著「資料檢查」的 issue，列出是哪一列、哪裡要改；內容有變動時留言（watch 這個 repo 就會收到通知），全部修好後自動關閉。邏輯在 `scripts/data-check-issue.sh`。
+
+- **錯誤**：資料停在上一版，修好才會恢復更新
+- **警告**：資料照常更新，但會顯示不完整。例如「已排定」「已完成」的場次漏填開始或結束時間，那場就先不放進訂閱日曆
 
 ## 授權
 

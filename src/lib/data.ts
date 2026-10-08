@@ -115,8 +115,10 @@ export const LICENSE_URL: Record<string, string> = {
 
 // ---------- 日曆 ----------
 
-// 「已排定」「已完成」的時間已談定、「停辦」要通知已訂閱的人劃掉；「邀約中」還沒確定，不進 .ics
-export const inIcs = (e: Event) => e.status === '已排定' || e.status === '已完成' || e.status === '停辦';
+// 「已排定」「已完成」的時間已談定、「停辦」要通知已訂閱的人劃掉；「邀約中」還沒確定，不進 .ics。
+// 已排定／已完成卻漏填時間的，sync 會發警告（每日建置據此開 issue），補好之前先不放進來
+export const inIcs = (e: Event) =>
+  e.status === '停辦' || ((e.status === '已排定' || e.status === '已完成') && !!e.start_time && !!e.end_time);
 
 export const monthOf = (date: string) => date.slice(0, 7);
 

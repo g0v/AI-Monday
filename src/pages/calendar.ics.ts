@@ -1,5 +1,4 @@
 // 可訂閱的日曆（RFC 5545）。只收時間已談定的場次，見 data.ts 的 inIcs()。
-// 正式網域還沒定，所以場次頁的絕對網址要等 astro.config 設了 site 才放得進去；沒設就省略 URL。
 import type { APIRoute } from 'astro';
 import { eventTitle, getData, hasContent, inIcs, speakerNames, talkTitle } from '../lib/data';
 
@@ -23,7 +22,7 @@ export const GET: APIRoute = async ({ site }) => {
       `DTSTAMP:${stamp}`,
       ...(timed
         ? [`DTSTART;TZID=Asia/Taipei:${compact(e.date)}T${compact(e.start_time!)}00`, `DTEND;TZID=Asia/Taipei:${compact(e.date)}T${compact(e.end_time!)}00`]
-        // 停辦的場次可能沒有時間：當成全天事件，讓訂閱者看得到它被劃掉
+        // 只有停辦的會走到這裡（可能沒有時間）：當成全天事件，讓訂閱者看得到它被劃掉
         : [`DTSTART;VALUE=DATE:${compact(e.date)}`, `DTEND;VALUE=DATE:${compact(nextDay(e.date))}`]),
       `SUMMARY:${text(eventTitle(e))}`,
       ...(desc ? [`DESCRIPTION:${text(desc)}`] : []),
