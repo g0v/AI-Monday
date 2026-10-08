@@ -17,9 +17,8 @@ const slides = slidesEmbed(t.slides_url);
 const embed = t.video?.youtube_id
   ? `https://www.youtube-nocookie.com/embed/${t.video.youtube_id}${t.video.start_sec ? `?start=${t.video.start_sec}` : ''}`
   : null;
-const license = t.license
-  ? { text: `${t.license.replace(/-/g, ' ')} 4.0`, url: LICENSE_URL[t.license] }
-  : t.license_status === 'pending' ? { text: '確認中' } : { text: '未標示' };
+// 授權只在確定時顯示；「確認中」「未標示」對讀者是雜訊
+const license = t.license ? { text: `${t.license.replace(/-/g, ' ')} 4.0`, url: LICENSE_URL[t.license] } : null;
 ---
 <Base title={title} description={t.description ?? `${speakerNames(t)}｜${eventTitle(e)}`} image={thumbUrl(t) ?? undefined}>
   <a class="back" href={href(`/events/${e.id}/`)}>← {formatDate(e)} {e.theme ?? e.series}</a>
@@ -31,7 +30,9 @@ const license = t.license
         {t.speakers.map((s) => (
           <li>
             {s.url ? <a href={s.url}>{s.name}</a> : <span class="name">{s.name}</span>}
-            {s.affiliation && <span class="muted">{s.affiliation}</span>}
+            {s.affiliation && (s.affiliation_url
+              ? <a class="muted aff" href={s.affiliation_url}>{s.affiliation}</a>
+              : <span class="muted">{s.affiliation}</span>)}
           </li>
         ))}
       </ul>
@@ -52,7 +53,7 @@ const license = t.license
           ></iframe>
         </div>
       ) : (
-        <p class="no-video">這個講題沒有錄影。</p>
+        <p class="no-video">無錄影</p>
       )}
 
       {t.description && <p class="description">{t.description}</p>}
@@ -73,7 +74,7 @@ const license = t.license
         <div><dt>場次</dt><dd><a href={href(`/events/${e.id}/`)}>{eventTitle(e)}</a></dd></div>
         <div><dt>日期</dt><dd>{formatDate(e)}</dd></div>
         {t.duration_min && <div><dt>長度</dt><dd class="num">{t.duration_min} 分鐘</dd></div>}
-        {t.video && <div><dt>影片授權</dt><dd>{license.url ? <a href={license.url}>{license.text}</a> : license.text}</dd></div>}
+        {t.video && license && <div><dt>影片授權</dt><dd>{license.url ? <a href={license.url}>{license.text}</a> : license.text}</dd></div>}
         {t.video && <div><dt>原始影片</dt><dd><a href={t.video.url}>在 YouTube 觀看</a></dd></div>}
         {t.slides_url && !slides && <div><dt>簡報</dt><dd><a href={t.slides_url}>開啟簡報資料夾</a></dd></div>}
         {t.keywords.length > 0 && (
@@ -105,6 +106,8 @@ const license = t.license
   .speakers li { display: flex; flex-direction: column; }
   .speakers .name, .speakers a { font-weight: 600; }
   .speakers .muted { font-size: .875rem; }
+  .speakers a.aff { font-weight: 400; color: var(--muted); }
+  .speakers a.aff:hover { color: var(--text); }
 
   .layout { display: grid; gap: 40px; }
   @media (min-width: 960px) { .layout { grid-template-columns: minmax(0, 1fr) 18rem; gap: 56px; } }

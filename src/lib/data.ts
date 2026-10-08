@@ -5,7 +5,8 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-export interface Speaker { name: string; affiliation: string | null; url: string | null }
+// affiliation_url：單位官網（API 2026-10 才加的欄位）；url：講者個人連結
+export interface Speaker { name: string; affiliation: string | null; affiliation_url?: string | null; url: string | null }
 export interface Video { url: string; youtube_id: string | null; start_sec: number }
 export interface Promotion { text: string; urls: string[] }
 
