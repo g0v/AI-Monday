@@ -15,6 +15,9 @@ LABEL='資料檢查'
 run() { if [ -n "${DRY_RUN:-}" ]; then echo "[dry-run] $1 $2 $3"; printf '  ‹%s›\n' "${@:4}"; else "$@"; fi; }
 
 report=$(curl -fsS --max-time 30 "$REPORT_URL") || { echo "::error::讀不到 $REPORT_URL"; exit 1; }
+# Cloudflare Pages 遇到不存在的路徑會回 200 加首頁 HTML，所以不能只看狀態碼
+jq -e '.counts and (.errors | type == "array") and (.warnings | type == "array")' >/dev/null 2>&1 <<<"$report" \
+  || { echo "::error::$REPORT_URL 讀到的不是檢查報告（還沒產生？）：$(head -c 80 <<<"$report")"; exit 1; }
 errors=$(jq '.errors | length' <<<"$report")
 warnings=$(jq '.warnings | length' <<<"$report")
 total=$((errors + warnings))
