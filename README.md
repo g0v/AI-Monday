@@ -9,6 +9,8 @@ g0v 揪松團每月一場的 AI Monday 線上講座，以及 g0v 國會松、COS
 | `/` | 下一場活動、錄影一覽、所有場次。可以搜尋講題、講者、單位、關鍵字，也可以依系列篩選。搜尋條件會寫進網址，可以直接分享 |
 | `/events/{id}/` | 單一場次：時間、形式、地點、共筆、議程（有開始時間就推算每個講題的時間）、宣傳事項 |
 | `/talks/{id}/` | 單一講題：講者、錄影（從這個講題在整場錄影裡的起始時間開始播）、簡介、簡報、影片授權 |
+| `/calendar/`、`/calendar/{YYYY-MM}/` | 月曆，可前後翻月。手機上格子只顯示圓點，細節看下方的當月場次列表 |
+| `/calendar.ics` | 可訂閱的日曆。只收「已排定」「已完成」「停辦」的場次（停辦標成取消，讓訂閱者的日曆自動劃掉）；還在邀約的不收 |
 
 還在邀約講者的空位只會出現在場次頁，不會有自己的講題頁。
 
@@ -46,6 +48,7 @@ AIMONDAY_DATA=path/to/v0/aimonday npm run build
 | `src/lib/data.ts` | 讀資料、型別、共用的格式化函式（日期、議程時間、YouTube 縮圖、簡報內嵌網址） |
 | `src/layouts/Base.astro` | 共用版型與全站樣式（顏色、字體都定義在這裡） |
 | `src/components/EventRow.astro` | 首頁的場次列 |
+| `src/components/CalendarMonth.astro` | 月曆的一個月（`/calendar/` 與 `/calendar/{YYYY-MM}/` 共用） |
 | `src/pages/` | 首頁、場次頁、講題頁、404 |
 
 站內連結一律經過 `href()`。之後如果網站掛在子路徑下，只要在 `astro.config.mjs` 設定 `base`。
