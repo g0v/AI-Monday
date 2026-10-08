@@ -77,5 +77,5 @@ SITE=https://example.org BASE=/ npm run build
 ## 授權
 
 - 程式碼：[MIT](LICENSE)
-- 場次與講題資料：[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.zh-hant)，姓名標示「g0v civictech.tw」
+- 場次與講題資料：[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.zh-hant)，姓名標示「AI Monday 工作小組」
 - 錄影與簡報：屬於各講者，授權依各講題頁上的標示
