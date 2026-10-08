@@ -1,0 +1,58 @@
+name: 建置、部署與資料檢查
+
+# 網站在建置時讀 data.civictech.tw，資料每天台灣 04:00 在 VPS 上同步，
+# 所以每天 05:00 重建一次，網站才會跟著資料更新。
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 21 * * *' # UTC 21:00＝台灣 05:00
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  # 讀 sync 公開的檢查報告：Sheet 有要修的地方就開（或更新）一張 issue，修好了自動關。
+  # 跟建置分開跑：資料有問題時網站照樣要更新。
+  data-check:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/data-check-issue.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
